@@ -4,13 +4,17 @@ import "github.com/LeeroyLin/golin/iface"
 
 type Request struct {
 	conn iface.IConnection
-	data []byte
+	msg  iface.IMessage
 }
 
 func (r *Request) GetConnection() iface.IConnection {
 	return r.conn
 }
 
+func (r *Request) GetMsg() iface.IMessage {
+	return r.msg
+}
+
 func (r *Request) GetData() []byte {
-	return r.data
+	return r.msg.GetData()
 }

@@ -1,10 +1,10 @@
 package net
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"github.com/LeeroyLin/golin/iface"
-	"github.com/LeeroyLin/golin/utils"
 	"net"
 )
 
@@ -22,17 +22,40 @@ func (c *Connection) StartReader() {
 
 	fmt.Println("Start conn read. id=", c.ConnId)
 
+	binaryData := make([]byte, 1024)
+
+	dataPack := DataPack{}
+
+	buffer := bytes.NewBuffer([]byte{})
+
 	for {
-		buf := make([]byte, utils.GlobalConfig.MaxPackageSize)
-		_, err := c.Conn.Read(buf)
+		if buffer.Len() < int(dataPack.GetHeadLen()) {
+			cnt, err := c.Conn.Read(binaryData)
+			if err != nil {
+				fmt.Println("Read buf err", err, ", id=", c.ConnId)
+				continue
+			}
+
+			if cnt == 0 {
+				continue
+			}
+
+			buffer.Write(binaryData[:cnt])
+
+			if buffer.Len() < int(dataPack.GetHeadLen()) {
+				continue
+			}
+		}
+
+		msg, err := dataPack.Unpack(buffer, binaryData, c)
 		if err != nil {
-			fmt.Println("Read buf err", err, ", id=", c.ConnId)
+			fmt.Println("Unpack msg data err", err, ", id=", c.ConnId)
 			continue
 		}
 
 		req := Request{
 			conn: c,
-			data: buf,
+			msg:  msg,
 		}
 
 		go func(request iface.IRequest) {
