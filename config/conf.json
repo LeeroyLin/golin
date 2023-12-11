@@ -1,0 +1,6 @@
+{
+  "Name": "TestServer",
+  "Host": "0.0.0.0",
+  "TcpPort": 2333,
+  "MaxConn": 1000
+}
