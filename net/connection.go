@@ -3,8 +3,8 @@ package net
 import (
 	"errors"
 	"fmt"
-	"golin/iface"
-	"golin/utils"
+	"github.com/LeeroyLin/golin/iface"
+	"github.com/LeeroyLin/golin/utils"
 	"net"
 )
 

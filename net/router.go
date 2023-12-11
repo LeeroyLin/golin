@@ -1,8 +1,6 @@
 package net
 
-import (
-	"golin/iface"
-)
+import "github.com/LeeroyLin/golin/iface"
 
 type BaseRouter struct {
 }

@@ -2,8 +2,8 @@ package net
 
 import (
 	"fmt"
-	"golin/iface"
-	"golin/utils"
+	"github.com/LeeroyLin/golin/iface"
+	"github.com/LeeroyLin/golin/utils"
 	"net"
 )
 
