@@ -14,7 +14,3 @@ func (r *Request) GetConnection() iface.IConnection {
 func (r *Request) GetMsg() iface.IMessage {
 	return r.msg
 }
-
-func (r *Request) GetData() []byte {
-	return r.msg.GetData()
-}

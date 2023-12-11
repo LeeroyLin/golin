@@ -50,6 +50,7 @@ func (c *Connection) StartReader() {
 		msg, err := dataPack.Unpack(buffer, binaryData, c)
 		if err != nil {
 			fmt.Println("Unpack msg data err", err, ", id=", c.ConnId)
+			buffer.Reset()
 			continue
 		}
 
@@ -57,6 +58,8 @@ func (c *Connection) StartReader() {
 			conn: c,
 			msg:  msg,
 		}
+
+		fmt.Println("Receive data. MsgId", msg.GetMsgId(), ", id=", c.ConnId)
 
 		go func(request iface.IRequest) {
 			c.Router.PreHandle(request)
