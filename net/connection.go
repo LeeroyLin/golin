@@ -101,10 +101,24 @@ func (c *Connection) GetRemoteAddr() net.Addr {
 	return c.Conn.RemoteAddr()
 }
 
-func (c *Connection) Send(data []byte) error {
-	_, err := c.Conn.Write(data)
+func (c *Connection) Send(protoId uint16, data []byte) error {
+	dataPack := DataPack{}
+
+	msg := &Message{
+		MsgId:   0,
+		ProtoId: protoId,
+		MsgLen:  uint32(len(data)),
+		Data:    data,
+	}
+
+	nData, err := dataPack.Pack(msg)
 	if err != nil {
-		return errors.New("conn send error")
+		return errors.New("pack msg error")
+	}
+
+	_, err = c.Conn.Write(nData)
+	if err != nil {
+		return errors.New("send msg error")
 	}
 
 	return nil

@@ -39,17 +39,28 @@ func (dp *DataPack) Pack(msg iface.IMessage) ([]byte, error) {
 		return nil, err
 	}
 
+	if utils.GlobalConfig.IsEncrypt {
+		bHead := make([]byte, dp.GetHeadLen())
+
+		if err := binary.Read(dataBuff, binary.LittleEndian, &bHead); err != nil {
+			return nil, err
+		}
+
+		b := utils.RC4Encrypt(bHead)
+
+		dataBuff.Reset()
+
+		if err := binary.Write(dataBuff, binary.LittleEndian, b); err != nil {
+			return nil, err
+		}
+	}
+
 	// 写 内容
 	if err := binary.Write(dataBuff, binary.LittleEndian, msg.GetData()); err != nil {
 		return nil, err
 	}
 
-	if utils.GlobalConfig.IsEncrypt {
-		b := utils.RC4Encrypt(dataBuff.Bytes())
-		return b, nil
-	} else {
-		return dataBuff.Bytes(), nil
-	}
+	return dataBuff.Bytes(), nil
 }
 
 func (dp *DataPack) Unpack(dataBuffer *bytes.Buffer, binaryData []byte, c *Connection) (iface.IMessage, error) {
@@ -62,11 +73,7 @@ func (dp *DataPack) Unpack(dataBuffer *bytes.Buffer, binaryData []byte, c *Conne
 			return nil, err
 		}
 
-		c.logfln("before ", bHead)
-
 		b := utils.RC4Decrypt(bHead)
-
-		c.logfln("after ", b)
 
 		msg.MsgId = binary.LittleEndian.Uint16(b[:2])
 		msg.ProtoId = binary.LittleEndian.Uint16(b[2:4])
