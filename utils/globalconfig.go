@@ -12,6 +12,8 @@ type GlobalConf struct {
 	TcpPort   int
 	MaxConn   int
 	MaxMsgLen uint32
+	IsEncrypt bool
+	RC4Key    string
 }
 
 var GlobalConfig *GlobalConf
@@ -39,6 +41,8 @@ func init() {
 		Host:      "0.0.0.0",
 		MaxConn:   1000,
 		MaxMsgLen: 4096,
+		IsEncrypt: false,
+		RC4Key:    "LeeroyLin",
 	}
 
 	GlobalConfig.LoadFromConf()

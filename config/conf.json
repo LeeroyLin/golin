@@ -3,5 +3,7 @@
   "Host": "0.0.0.0",
   "TcpPort": 2333,
   "MaxConn": 1000,
-  "MaxMsgLen": 4096
+  "MaxMsgLen": 4096,
+  "IsEncrypt": false,
+  "RC4Key": "Mz,*'cP,.:'|z2"
 }

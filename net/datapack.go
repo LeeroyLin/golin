@@ -44,33 +44,59 @@ func (dp *DataPack) Pack(msg iface.IMessage) ([]byte, error) {
 		return nil, err
 	}
 
-	return dataBuff.Bytes(), nil
+	if utils.GlobalConfig.IsEncrypt {
+		b := utils.RC4Encrypt(dataBuff.Bytes())
+		return b, nil
+	} else {
+		return dataBuff.Bytes(), nil
+	}
 }
 
 func (dp *DataPack) Unpack(dataBuffer *bytes.Buffer, binaryData []byte, c *Connection) (iface.IMessage, error) {
 	msg := &Message{}
 
-	// 读 序列号
-	if err := binary.Read(dataBuffer, binary.LittleEndian, &msg.MsgId); err != nil {
-		return nil, err
-	}
+	if utils.GlobalConfig.IsEncrypt {
+		bHead := make([]byte, dp.GetHeadLen())
 
-	// 读 协议号
-	if err := binary.Read(dataBuffer, binary.LittleEndian, &msg.ProtoId); err != nil {
-		return nil, err
-	}
+		if err := binary.Read(dataBuffer, binary.LittleEndian, &bHead); err != nil {
+			return nil, err
+		}
 
-	// 读 内容长度
-	if err := binary.Read(dataBuffer, binary.LittleEndian, &msg.MsgLen); err != nil {
-		return nil, err
+		c.logfln("before ", bHead)
+
+		b := utils.RC4Decrypt(bHead)
+
+		c.logfln("after ", b)
+
+		msg.MsgId = binary.LittleEndian.Uint16(b[:2])
+		msg.ProtoId = binary.LittleEndian.Uint16(b[2:4])
+		msg.MsgLen = binary.LittleEndian.Uint32(b[4:8])
+
+	} else {
+		// 读 序列号
+		if err := binary.Read(dataBuffer, binary.LittleEndian, &msg.MsgId); err != nil {
+			return nil, err
+		}
+
+		// 读 协议号
+		if err := binary.Read(dataBuffer, binary.LittleEndian, &msg.ProtoId); err != nil {
+			return nil, err
+		}
+
+		// 读 内容长度
+		if err := binary.Read(dataBuffer, binary.LittleEndian, &msg.MsgLen); err != nil {
+			return nil, err
+		}
 	}
 
 	// 判断消息内容长度
 	if msg.MsgLen > utils.GlobalConfig.MaxMsgLen {
 		return nil, errors.New(fmt.Sprintf(
-			"Msg length %d over max length %d.",
+			"Msg length %d over max length %d. MsgId:%d ProtoId:%d",
 			msg.MsgLen,
 			utils.GlobalConfig.MaxMsgLen,
+			msg.MsgId,
+			msg.ProtoId,
 		))
 	}
 
