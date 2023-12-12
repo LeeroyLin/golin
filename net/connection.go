@@ -34,7 +34,7 @@ func (c *Connection) StartReader() {
 			cnt, err := c.Conn.Read(binaryData)
 			if err != nil {
 				c.logln("Read buf err:", err)
-				continue
+				return
 			}
 
 			if cnt == 0 {
@@ -45,7 +45,7 @@ func (c *Connection) StartReader() {
 
 			if buffer.Len() < targetHeadLen {
 				c.logln("Msg header length %d less than target length %d", buffer.Len(), targetHeadLen)
-				break
+				return
 			}
 		}
 
@@ -70,13 +70,13 @@ func (c *Connection) StartReader() {
 }
 
 func (c *Connection) Start() {
-	c.logln("Start connection")
+	c.logln("【Start】 connection")
 
 	go c.StartReader()
 }
 
 func (c *Connection) Stop() {
-	c.logln("Stop connection")
+	c.logln("【Stop】 connection")
 
 	if c.isClosed {
 		return
@@ -123,9 +123,9 @@ func NewConnection(conn *net.TCPConn, connId uint32, router iface.IRouter) *Conn
 }
 
 func (c *Connection) logfln(str string, a ...any) {
-	fmt.Printf("[Conn:%d] %s\n", c.ConnId, fmt.Sprintf(str, a))
+	fmt.Printf("[Conn:%d] %s\n", c.ConnId, fmt.Sprintf(str, a...))
 }
 
 func (c *Connection) logln(a ...any) {
-	fmt.Printf("[Conn:%d] %s\n", c.ConnId, fmt.Sprint(a))
+	fmt.Printf("[Conn:%d] %s\n", c.ConnId, fmt.Sprint(a...))
 }
