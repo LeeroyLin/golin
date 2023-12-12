@@ -17,10 +17,9 @@ type Connection struct {
 }
 
 func (c *Connection) StartReader() {
-	defer fmt.Println("Finish conn read. id=", c.ConnId, ", remove addr=", c.GetRemoteAddr().String())
 	defer c.Stop()
 
-	fmt.Println("Start conn read. id=", c.ConnId)
+	c.logfln("Start reader")
 
 	binaryData := make([]byte, 1024)
 
@@ -28,11 +27,13 @@ func (c *Connection) StartReader() {
 
 	buffer := bytes.NewBuffer([]byte{})
 
+	targetHeadLen := dataPack.GetHeadLen()
+
 	for {
-		if buffer.Len() < int(dataPack.GetHeadLen()) {
+		if buffer.Len() < targetHeadLen {
 			cnt, err := c.Conn.Read(binaryData)
 			if err != nil {
-				fmt.Println("Read buf err", err, ", id=", c.ConnId)
+				c.logln("Read buf err:", err)
 				continue
 			}
 
@@ -42,24 +43,23 @@ func (c *Connection) StartReader() {
 
 			buffer.Write(binaryData[:cnt])
 
-			if buffer.Len() < int(dataPack.GetHeadLen()) {
-				continue
+			if buffer.Len() < targetHeadLen {
+				c.logln("Msg header length %d less than target length %d", buffer.Len(), targetHeadLen)
+				break
 			}
 		}
 
 		msg, err := dataPack.Unpack(buffer, binaryData, c)
 		if err != nil {
-			fmt.Println("Unpack msg data err", err, ", id=", c.ConnId)
-			buffer.Reset()
-			continue
+			c.logln("Unpack msg data err:", err)
+
+			return
 		}
 
 		req := Request{
 			conn: c,
 			msg:  msg,
 		}
-
-		fmt.Println("Receive data. MsgId", msg.GetMsgId(), ", id=", c.ConnId)
 
 		go func(request iface.IRequest) {
 			c.Router.PreHandle(request)
@@ -70,13 +70,13 @@ func (c *Connection) StartReader() {
 }
 
 func (c *Connection) Start() {
-	fmt.Println("Start conn id=", c.ConnId)
+	c.logln("Start connection")
 
 	go c.StartReader()
 }
 
 func (c *Connection) Stop() {
-	fmt.Println("Stop conn id=", c.ConnId)
+	c.logln("Stop connection")
 
 	if c.isClosed {
 		return
@@ -120,4 +120,12 @@ func NewConnection(conn *net.TCPConn, connId uint32, router iface.IRouter) *Conn
 	}
 
 	return c
+}
+
+func (c *Connection) logfln(str string, a ...any) {
+	fmt.Printf("[Conn:%d] %s\n", c.ConnId, fmt.Sprintf(str, a))
+}
+
+func (c *Connection) logln(a ...any) {
+	fmt.Printf("[Conn:%d] %s\n", c.ConnId, fmt.Sprint(a))
 }

@@ -7,11 +7,11 @@ import (
 )
 
 type GlobalConf struct {
-	Name           string
-	Host           string
-	TcpPort        int
-	MaxConn        int
-	MaxPackageSize uint32
+	Name      string
+	Host      string
+	TcpPort   int
+	MaxConn   int
+	MaxMsgLen uint32
 }
 
 var GlobalConfig *GlobalConf
@@ -34,11 +34,11 @@ func (g GlobalConf) LoadFromConf() {
 
 func init() {
 	GlobalConfig = &GlobalConf{
-		Name:           "GoLinServer",
-		TcpPort:        2333,
-		Host:           "0.0.0.0",
-		MaxConn:        1000,
-		MaxPackageSize: 4096,
+		Name:      "GoLinServer",
+		TcpPort:   2333,
+		Host:      "0.0.0.0",
+		MaxConn:   1000,
+		MaxMsgLen: 4096,
 	}
 
 	GlobalConfig.LoadFromConf()

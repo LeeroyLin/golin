@@ -20,15 +20,16 @@ func (s *Server) AddRouter(router iface.IRouter) {
 }
 
 func (s *Server) Start() {
-	fmt.Printf("Start %s server...\nHost:%s Port:%d\n",
+	fmt.Printf("Start '%s' server...\nHost:%s Port:%d\n",
 		utils.GlobalConfig.Name, utils.GlobalConfig.Host, utils.GlobalConfig.TcpPort)
 
 	fmt.Printf("MaxConn:%d\n", utils.GlobalConfig.MaxConn)
+	fmt.Printf("MaxMsgLen:%d\n", utils.GlobalConfig.MaxMsgLen)
 
 	go func() {
 		addr, err := net.ResolveTCPAddr(s.IPVersion, fmt.Sprintf("%s:%d", s.IP, s.Port))
 		if err != nil {
-			fmt.Println("Receive tcp addr error: ", err)
+			fmt.Println("Resolve tcp addr error: ", err)
 			return
 		}
 

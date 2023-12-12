@@ -3,7 +3,7 @@ package net
 type Message struct {
 	MsgId   uint16
 	ProtoId uint16
-	MsgLen  uint16
+	MsgLen  uint32
 	Data    []byte
 }
 
@@ -23,11 +23,11 @@ func (m *Message) SetProtoId(id uint16) {
 	m.ProtoId = id
 }
 
-func (m *Message) GetMsgLen() uint16 {
+func (m *Message) GetMsgLen() uint32 {
 	return m.MsgLen
 }
 
-func (m *Message) SetMsgLen(len uint16) {
+func (m *Message) SetMsgLen(len uint32) {
 	m.MsgLen = len
 }
 

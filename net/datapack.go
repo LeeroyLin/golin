@@ -16,9 +16,9 @@ func NewDataPack() *DataPack {
 	return &DataPack{}
 }
 
-func (dp *DataPack) GetHeadLen() uint32 {
-	// 序列号2字节 协议号2字节 内容长度2字节
-	return 6
+func (dp *DataPack) GetHeadLen() int {
+	// 序列号2字节 协议号2字节 内容长度4字节
+	return 8
 }
 
 func (dp *DataPack) Pack(msg iface.IMessage) ([]byte, error) {
@@ -65,13 +65,12 @@ func (dp *DataPack) Unpack(dataBuffer *bytes.Buffer, binaryData []byte, c *Conne
 		return nil, err
 	}
 
-	pkgLen := uint32(msg.MsgLen) + dp.GetHeadLen()
-
-	if pkgLen > utils.GlobalConfig.MaxPackageSize {
+	// 判断消息内容长度
+	if msg.MsgLen > utils.GlobalConfig.MaxMsgLen {
 		return nil, errors.New(fmt.Sprintf(
-			"Package total size %d over max size %d.",
-			pkgLen,
-			utils.GlobalConfig.MaxPackageSize,
+			"Msg length %d over max length %d.",
+			msg.MsgLen,
+			utils.GlobalConfig.MaxMsgLen,
 		))
 	}
 
@@ -84,13 +83,11 @@ func (dp *DataPack) Unpack(dataBuffer *bytes.Buffer, binaryData []byte, c *Conne
 
 		cnt, err := c.Conn.Read(binaryData)
 		if err != nil {
-			fmt.Println("Read buf err", err, ", id=", c.ConnId)
-			break
+			return nil, errors.New(fmt.Sprint("Read msg content err:", err))
 		}
 
 		if cnt == 0 {
-			fmt.Println("Package size less than head set size.")
-			break
+			return nil, errors.New(fmt.Sprint("Read msg content failed. no enough data."))
 		}
 
 		dataBuffer.Write(binaryData[:cnt])
