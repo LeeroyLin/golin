@@ -94,9 +94,7 @@ func (c *Connection) RouterHandle(request iface.IRequest) {
 
 	errorCode, resData := router.Handle(request)
 
-	if resData != nil {
-		c.SendPB(request, errorCode, resData)
-	}
+	c.SendPB(request, errorCode, resData)
 
 	router.PostHandle(request)
 }
@@ -157,10 +155,15 @@ func (c *Connection) Send(protoId uint16, data []byte) error {
 }
 
 func (c *Connection) SendPB(request iface.IRequest, errorCode int32, resData proto.Message) error {
-	pbResData, err := proto.Marshal(resData)
-	if err != nil {
-		fmt.Printf("Marshal protobuf data failed.")
-		return err
+	var pbResData []byte
+	if resData != nil {
+		data, err := proto.Marshal(resData)
+		if err != nil {
+			fmt.Printf("Marshal protobuf data failed.")
+			return err
+		}
+
+		pbResData = data
 	}
 
 	respose := &proto_model.Response{
