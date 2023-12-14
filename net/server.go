@@ -12,11 +12,16 @@ type Server struct {
 	IPVersion string
 	IP        string
 	Port      int
-	Router    iface.IRouter
+	RouterMap map[uint16]iface.IRouter
 }
 
-func (s *Server) AddRouter(router iface.IRouter) {
-	s.Router = router
+func (s *Server) AddRouter(protoId uint16, router iface.IRouter) {
+	if _, has := s.RouterMap[protoId]; has {
+		fmt.Println("Already has router handle at protoId: ", protoId)
+		return
+	}
+
+	s.RouterMap[protoId] = router
 }
 
 func (s *Server) Start() {
@@ -54,8 +59,13 @@ func (s *Server) Start() {
 				continue
 			}
 
-			dealConn := NewConnection(conn, cid, s.Router)
-			cid++
+			dealConn := NewConnection(conn, cid, s.RouterMap)
+
+			if cid == ^uint32(0) {
+				cid = 0
+			} else {
+				cid++
+			}
 
 			go dealConn.Start()
 		}
@@ -77,7 +87,7 @@ func NewServer() iface.IServer {
 		IPVersion: "tcp4",
 		IP:        utils.GlobalConfig.Host,
 		Port:      utils.GlobalConfig.TcpPort,
-		Router:    nil,
+		RouterMap: make(map[uint16]iface.IRouter),
 	}
 
 	return s

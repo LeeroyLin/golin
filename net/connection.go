@@ -2,18 +2,21 @@ package net
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/LeeroyLin/golin/iface"
+	"github.com/LeeroyLin/golin/proto_model"
+	"google.golang.org/protobuf/proto"
 	"net"
 )
 
 type Connection struct {
-	Conn     *net.TCPConn
-	ConnId   uint32
-	isClosed bool
-	ExitChan chan bool
-	Router   iface.IRouter
+	Conn      *net.TCPConn
+	ConnId    uint32
+	isClosed  bool
+	ExitChan  chan bool
+	RouterMap map[uint16]iface.IRouter
 }
 
 func (c *Connection) StartReader() {
@@ -61,12 +64,41 @@ func (c *Connection) StartReader() {
 			msg:  msg,
 		}
 
-		go func(request iface.IRequest) {
-			c.Router.PreHandle(request)
-			c.Router.Handle(request)
-			c.Router.PostHandle(request)
-		}(&req)
+		go c.RouterHandle(&req)
 	}
+}
+
+func (c *Connection) RouterHandle(request iface.IRequest) {
+	msg := request.GetMsg()
+
+	router, has := c.RouterMap[msg.GetProtoId()]
+	if !has {
+		return
+	}
+
+	fmt.Printf("【Req msg】 ConnId:%d MsgId:%d ProtoId:%d MsgLen:%d\n",
+		c.GetConnId(),
+		msg.GetMsgId(),
+		msg.GetProtoId(),
+		msg.GetMsgLen())
+
+	jsonStr, err := json.Marshal(msg.GetData())
+	if err != nil {
+		fmt.Printf("Msg data to json failed.")
+		return
+	}
+
+	fmt.Printf("【Req data】%s\n", jsonStr)
+
+	router.PreHandle(request)
+
+	errorCode, resData := router.Handle(request)
+
+	if resData != nil {
+		c.SendPB(request, errorCode, resData)
+	}
+
+	router.PostHandle(request)
 }
 
 func (c *Connection) Start() {
@@ -102,7 +134,7 @@ func (c *Connection) GetRemoteAddr() net.Addr {
 }
 
 func (c *Connection) Send(protoId uint16, data []byte) error {
-	dataPack := DataPack{}
+	dataPack := NewDataPack()
 
 	msg := &Message{
 		MsgId:   0,
@@ -124,13 +156,59 @@ func (c *Connection) Send(protoId uint16, data []byte) error {
 	return nil
 }
 
-func NewConnection(conn *net.TCPConn, connId uint32, router iface.IRouter) *Connection {
+func (c *Connection) SendPB(request iface.IRequest, errorCode int32, resData proto.Message) error {
+	pbResData, err := proto.Marshal(resData)
+	if err != nil {
+		fmt.Printf("Marshal protobuf data failed.")
+		return err
+	}
+
+	respose := &proto_model.Response{
+		Code: errorCode,
+		Msg:  "",
+		Data: pbResData,
+	}
+
+	pbResponse, err := proto.Marshal(respose)
+	if err != nil {
+		fmt.Printf("Marshal protobuf response failed.")
+		return err
+	}
+
+	c.Send(request.GetMsg().GetProtoId()+1, pbResponse)
+
+	return nil
+}
+
+func (c *Connection) SendPBNotify(resData proto.Message, errorCode int32) {
+	pbResData, err := proto.Marshal(resData)
+	if err != nil {
+		fmt.Printf("Marshal protobuf data failed.")
+		return
+	}
+
+	respose := &proto_model.Response{
+		Code: errorCode,
+		Msg:  "",
+		Data: pbResData,
+	}
+
+	pbResponse, err := proto.Marshal(respose)
+	if err != nil {
+		fmt.Printf("Marshal protobuf response failed.")
+		return
+	}
+
+	c.Send(0, pbResponse)
+}
+
+func NewConnection(conn *net.TCPConn, connId uint32, routerMap map[uint16]iface.IRouter) *Connection {
 	c := &Connection{
-		Conn:     conn,
-		ConnId:   connId,
-		Router:   router,
-		isClosed: false,
-		ExitChan: make(chan bool, 1),
+		Conn:      conn,
+		ConnId:    connId,
+		RouterMap: routerMap,
+		isClosed:  false,
+		ExitChan:  make(chan bool, 1),
 	}
 
 	return c

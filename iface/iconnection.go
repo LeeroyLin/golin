@@ -1,6 +1,9 @@
 package iface
 
-import "net"
+import (
+	"google.golang.org/protobuf/proto"
+	"net"
+)
 
 type IConnection interface {
 	Start()
@@ -9,6 +12,5 @@ type IConnection interface {
 	GetConnId() uint32
 	GetRemoteAddr() net.Addr
 	Send(protoId uint16, data []byte) error
+	SendPB(request IRequest, errorCode int32, resData proto.Message) error
 }
-
-type HandleFunc func(*net.TCPConn, []byte, int) error
