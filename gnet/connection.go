@@ -16,7 +16,7 @@ type Connection struct {
 	ConnId    uint32
 	isClosed  bool
 	ExitChan  chan bool
-	RouterMap map[uint16]iface.IRouter
+	RouterMap map[uint16]RouterData
 }
 
 func (c *Connection) StartReader() {
@@ -71,18 +71,24 @@ func (c *Connection) StartReader() {
 func (c *Connection) RouterHandle(request iface.IRequest) {
 	msg := request.GetMsg()
 
-	router, has := c.RouterMap[msg.GetProtoId()]
-	if !has {
-		return
-	}
-
 	fmt.Printf("【Req msg】 ConnId:%d MsgId:%d ProtoId:%d MsgLen:%d\n",
 		c.GetConnId(),
 		msg.GetMsgId(),
 		msg.GetProtoId(),
 		msg.GetMsgLen())
 
-	jsonStr, err := json.Marshal(msg.GetData())
+	routerData, has := c.RouterMap[msg.GetProtoId()]
+	if !has {
+		return
+	}
+
+	err := proto.Unmarshal(msg.GetData(), routerData.ReqData)
+	if err != nil {
+		fmt.Println("Msg data to protobuf data failed. err: ", err)
+		return
+	}
+
+	jsonStr, err := json.Marshal(routerData.ReqData)
 	if err != nil {
 		fmt.Printf("Msg data to json failed.")
 		return
@@ -90,13 +96,13 @@ func (c *Connection) RouterHandle(request iface.IRequest) {
 
 	fmt.Printf("【Req data】%s\n", jsonStr)
 
-	router.PreHandle(request)
+	routerData.Router.PreHandle(request, routerData.ReqData)
 
-	errorCode, resData := router.Handle(request)
+	errorCode, resData := routerData.Router.Handle(request, routerData.ReqData)
 
 	c.SendPB(request, errorCode, resData)
 
-	router.PostHandle(request)
+	routerData.Router.PostHandle(request, routerData.ReqData)
 }
 
 func (c *Connection) Start() {
@@ -205,7 +211,7 @@ func (c *Connection) SendPBNotify(resData proto.Message, errorCode int32) {
 	c.Send(0, pbResponse)
 }
 
-func NewConnection(conn *net.TCPConn, connId uint32, routerMap map[uint16]iface.IRouter) *Connection {
+func NewConnection(conn *net.TCPConn, connId uint32, routerMap map[uint16]RouterData) *Connection {
 	c := &Connection{
 		Conn:      conn,
 		ConnId:    connId,

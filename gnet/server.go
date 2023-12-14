@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/LeeroyLin/golin/iface"
 	"github.com/LeeroyLin/golin/utils"
+	"google.golang.org/protobuf/proto"
 	"net"
 )
 
@@ -12,16 +13,19 @@ type Server struct {
 	IPVersion string
 	IP        string
 	Port      int
-	RouterMap map[uint16]iface.IRouter
+	RouterMap map[uint16]RouterData
 }
 
-func (s *Server) AddRouter(protoId uint16, router iface.IRouter) {
+func (s *Server) AddRouter(protoId uint16, router iface.IRouter, reqData proto.Message) {
 	if _, has := s.RouterMap[protoId]; has {
 		fmt.Println("Already has router handle at protoId: ", protoId)
 		return
 	}
 
-	s.RouterMap[protoId] = router
+	s.RouterMap[protoId] = RouterData{
+		Router:  router,
+		ReqData: reqData,
+	}
 }
 
 func (s *Server) Start() {
@@ -87,7 +91,7 @@ func NewServer() iface.IServer {
 		IPVersion: "tcp4",
 		IP:        utils.GlobalConfig.Host,
 		Port:      utils.GlobalConfig.TcpPort,
-		RouterMap: make(map[uint16]iface.IRouter),
+		RouterMap: make(map[uint16]RouterData),
 	}
 
 	return s
