@@ -1,4 +1,4 @@
-package net
+package gnet
 
 type Message struct {
 	MsgId   uint16
