@@ -15,7 +15,8 @@ type Connection struct {
 	Conn      *net.TCPConn
 	ConnId    uint32
 	isClosed  bool
-	ExitChan  chan bool
+	exitChan  chan bool
+	msgChan   chan []byte
 	RouterMap map[uint16]RouterData
 }
 
@@ -68,10 +69,25 @@ func (c *Connection) StartReader() {
 	}
 }
 
+func (c *Connection) StartWriter() {
+	c.logfln("Start writer")
+
+	select {
+	case m := <-c.msgChan:
+		_, err := c.Conn.Write(m)
+		if err != nil {
+			c.logln("send msg failed. err: ", err)
+		}
+		break
+	case <-c.exitChan:
+		break
+	}
+}
+
 func (c *Connection) RouterHandle(request iface.IRequest) {
 	msg := request.GetMsg()
 
-	fmt.Printf("【Req msg】 ConnId:%d MsgId:%d ProtoId:%d MsgLen:%d\n",
+	c.logfln("【Req msg】 ConnId:%d MsgId:%d ProtoId:%d MsgLen:%d",
 		c.GetConnId(),
 		msg.GetMsgId(),
 		msg.GetProtoId(),
@@ -84,23 +100,27 @@ func (c *Connection) RouterHandle(request iface.IRequest) {
 
 	err := proto.Unmarshal(msg.GetData(), routerData.ReqData)
 	if err != nil {
-		fmt.Println("Msg data to protobuf data failed. err: ", err)
+		c.logln("Msg data to protobuf data failed. err: ", err)
 		return
 	}
 
 	jsonStr, err := json.Marshal(routerData.ReqData)
 	if err != nil {
-		fmt.Printf("Msg data to json failed.")
+		c.logln("Msg data to json failed.")
 		return
 	}
 
-	fmt.Printf("【Req data】%s\n", jsonStr)
+	c.logfln("【Req data】%s", jsonStr)
 
 	routerData.Router.PreHandle(request, routerData.ReqData)
 
-	errorCode, resData := routerData.Router.Handle(request, routerData.ReqData)
+	errorCode, resData, resMsg := routerData.Router.Handle(request, routerData.ReqData)
 
-	c.SendPB(request, errorCode, resData)
+	err = c.SendPB(request, errorCode, resData, resMsg)
+	if err != nil {
+		c.logfln("Send pb failed. err: ", err)
+		return
+	}
 
 	routerData.Router.PostHandle(request, routerData.ReqData)
 }
@@ -120,9 +140,14 @@ func (c *Connection) Stop() {
 
 	c.isClosed = true
 
-	c.Conn.Close()
+	err := c.Conn.Close()
+	if err != nil {
+		c.logfln("Close connection failed. err: ", err)
+		return
+	}
 
-	close(c.ExitChan)
+	close(c.exitChan)
+	close(c.msgChan)
 }
 
 func (c *Connection) GetTCPConnection() *net.TCPConn {
@@ -152,63 +177,58 @@ func (c *Connection) Send(protoId uint16, data []byte) error {
 		return errors.New("pack msg error")
 	}
 
-	_, err = c.Conn.Write(nData)
-	if err != nil {
-		return errors.New("send msg error")
-	}
+	c.msgChan <- nData
 
 	return nil
 }
 
-func (c *Connection) SendPB(request iface.IRequest, errorCode int32, resData proto.Message) error {
+func (c *Connection) SendPB(request iface.IRequest, errorCode int32, resData proto.Message, resMsg string) error {
 	var pbResData []byte
 	if resData != nil {
 		data, err := proto.Marshal(resData)
 		if err != nil {
-			fmt.Printf("Marshal protobuf data failed.")
+			c.logln("Marshal protobuf data failed.")
 			return err
 		}
 
 		pbResData = data
 	}
 
-	respose := &proto_model.ProtoResponse{
+	res := &proto_model.ProtoResponse{
 		Code: errorCode,
-		Msg:  "",
+		Msg:  resMsg,
 		Data: pbResData,
 	}
 
-	pbResponse, err := proto.Marshal(respose)
+	pbResponse, err := proto.Marshal(res)
 	if err != nil {
-		fmt.Printf("Marshal protobuf response failed.")
+		c.logln("Marshal protobuf response failed.")
 		return err
 	}
 
-	c.Send(request.GetMsg().GetProtoId()+1, pbResponse)
-
-	return nil
+	return c.Send(request.GetMsg().GetProtoId()+1, pbResponse)
 }
 
-func (c *Connection) SendPBNotify(resData proto.Message, errorCode int32) {
+func (c *Connection) SendPBNotify(resData proto.Message, errorCode int32) error {
 	pbResData, err := proto.Marshal(resData)
 	if err != nil {
-		fmt.Printf("Marshal protobuf data failed.")
-		return
+		c.logln("Marshal protobuf data failed.")
+		return err
 	}
 
-	respose := &proto_model.ProtoResponse{
+	res := &proto_model.ProtoResponse{
 		Code: errorCode,
 		Msg:  "",
 		Data: pbResData,
 	}
 
-	pbResponse, err := proto.Marshal(respose)
+	pbResponse, err := proto.Marshal(res)
 	if err != nil {
-		fmt.Printf("Marshal protobuf response failed.")
-		return
+		c.logln("Marshal protobuf response failed.")
+		return err
 	}
 
-	c.Send(0, pbResponse)
+	return c.Send(0, pbResponse)
 }
 
 func NewConnection(conn *net.TCPConn, connId uint32, routerMap map[uint16]RouterData) *Connection {
@@ -217,7 +237,8 @@ func NewConnection(conn *net.TCPConn, connId uint32, routerMap map[uint16]Router
 		ConnId:    connId,
 		RouterMap: routerMap,
 		isClosed:  false,
-		ExitChan:  make(chan bool, 1),
+		exitChan:  make(chan bool, 1),
+		msgChan:   make(chan []byte),
 	}
 
 	return c
