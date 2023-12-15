@@ -9,23 +9,20 @@ import (
 )
 
 type Server struct {
-	Name      string
-	IPVersion string
-	IP        string
-	Port      int
-	RouterMap map[uint16]RouterData
+	Name           string
+	IPVersion      string
+	IP             string
+	Port           int
+	MessageHandler iface.IMessageHandler
 }
 
 func (s *Server) AddRouter(protoId uint16, router iface.IRouter, reqData proto.Message) {
-	if _, has := s.RouterMap[protoId]; has {
+	if s.MessageHandler.Has(protoId) {
 		fmt.Println("Already has router handle at protoId: ", protoId)
 		return
 	}
 
-	s.RouterMap[protoId] = RouterData{
-		Router:  router,
-		ReqData: reqData,
-	}
+	s.MessageHandler.Add(protoId, router, reqData)
 }
 
 func (s *Server) Start() {
@@ -63,7 +60,7 @@ func (s *Server) Start() {
 				continue
 			}
 
-			dealConn := NewConnection(conn, cid, s.RouterMap)
+			dealConn := NewConnection(conn, cid, s.MessageHandler)
 
 			if cid == ^uint32(0) {
 				cid = 0
@@ -87,11 +84,11 @@ func (s *Server) Serve() {
 
 func NewServer() iface.IServer {
 	s := &Server{
-		Name:      utils.GlobalConfig.Name,
-		IPVersion: "tcp4",
-		IP:        utils.GlobalConfig.Host,
-		Port:      utils.GlobalConfig.TcpPort,
-		RouterMap: make(map[uint16]RouterData),
+		Name:           utils.GlobalConfig.Name,
+		IPVersion:      "tcp4",
+		IP:             utils.GlobalConfig.Host,
+		Port:           utils.GlobalConfig.TcpPort,
+		MessageHandler: NewMessageHandler(),
 	}
 
 	return s

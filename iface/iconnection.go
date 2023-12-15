@@ -13,4 +13,6 @@ type IConnection interface {
 	GetRemoteAddr() net.Addr
 	Send(protoId uint16, data []byte) error
 	SendPB(request IRequest, errorCode int32, resData proto.Message, resMsg string) error
+	Logfln(str string, a ...any)
+	Logln(a ...any)
 }
