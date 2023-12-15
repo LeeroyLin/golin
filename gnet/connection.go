@@ -172,7 +172,7 @@ func (c *Connection) SendPB(request iface.IRequest, errorCode int32, resData pro
 		pbResData = data
 	}
 
-	respose := &proto_model.Response{
+	respose := &proto_model.ProtoResponse{
 		Code: errorCode,
 		Msg:  "",
 		Data: pbResData,
@@ -196,7 +196,7 @@ func (c *Connection) SendPBNotify(resData proto.Message, errorCode int32) {
 		return
 	}
 
-	respose := &proto_model.Response{
+	respose := &proto_model.ProtoResponse{
 		Code: errorCode,
 		Msg:  "",
 		Data: pbResData,
