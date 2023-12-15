@@ -72,15 +72,17 @@ func (c *Connection) StartReader() {
 func (c *Connection) StartWriter() {
 	c.logfln("Start writer")
 
-	select {
-	case m := <-c.msgChan:
-		_, err := c.Conn.Write(m)
-		if err != nil {
-			c.logln("send msg failed. err: ", err)
+	for {
+		select {
+		case m := <-c.msgChan:
+			_, err := c.Conn.Write(m)
+			if err != nil {
+				c.logln("send msg failed. err: ", err)
+			}
+			break
+		case <-c.exitChan:
+			break
 		}
-		break
-	case <-c.exitChan:
-		break
 	}
 }
 
