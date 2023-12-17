@@ -3,14 +3,17 @@ package gnet
 import (
 	"encoding/json"
 	"github.com/LeeroyLin/golin/iface"
+	"github.com/LeeroyLin/golin/utils"
 	"google.golang.org/protobuf/proto"
 )
 
 type MessageHandler struct {
-	Apis map[uint16]RouterData
+	Apis           map[uint16]RouterData
+	TaskQueue      []chan iface.IRequest
+	WorkerPoolSize uint32
 }
 
-func (h *MessageHandler) RouterHandle(request iface.IRequest) {
+func (h *MessageHandler) DoMsgHandle(request iface.IRequest) {
 	c := request.GetConnection()
 	msg := request.GetMsg()
 
@@ -64,8 +67,31 @@ func (h *MessageHandler) Add(protoId uint16, router iface.IRouter, reqData proto
 	}
 }
 
+func (h *MessageHandler) StartWorkerPool() {
+	for i := 0; i < int(h.WorkerPoolSize); i++ {
+		h.TaskQueue[i] = make(chan iface.IRequest, utils.GlobalConfig.MaxWorkerTaskLen)
+		go h.StartOneWorker(i)
+	}
+}
+
+func (h *MessageHandler) StartOneWorker(i int) {
+	for {
+		select {
+		case req := <-h.TaskQueue[i]:
+			h.DoMsgHandle(req)
+		}
+	}
+}
+
+func (h *MessageHandler) SendMsg2TaskQueue(request iface.IRequest) {
+	workerId := request.GetConnection().GetConnId() % h.WorkerPoolSize
+	h.TaskQueue[workerId] <- request
+}
+
 func NewMessageHandler() *MessageHandler {
 	return &MessageHandler{
-		Apis: make(map[uint16]RouterData),
+		Apis:           make(map[uint16]RouterData),
+		WorkerPoolSize: utils.GlobalConfig.WorkerPoolSize,
+		TaskQueue:      make([]chan iface.IRequest, utils.GlobalConfig.WorkerPoolSize),
 	}
 }

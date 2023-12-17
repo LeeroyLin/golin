@@ -64,7 +64,8 @@ func (c *Connection) StartReader() {
 			msg:  msg,
 		}
 
-		go c.MessageHandler.RouterHandle(&req)
+		go c.MessageHandler.DoMsgHandle(&req)
+
 	}
 }
 

@@ -33,6 +33,7 @@ func (s *Server) Start() {
 	fmt.Printf("MaxMsgLen:%d\n", utils.GlobalConfig.MaxMsgLen)
 	fmt.Printf("IsEncrypt:%t\n", utils.GlobalConfig.IsEncrypt)
 	fmt.Printf("RC4Key:%s\n", utils.GlobalConfig.RC4Key)
+	fmt.Printf("WorkerPoolSize:%d\n", utils.GlobalConfig.WorkerPoolSize)
 
 	go func() {
 		addr, err := net.ResolveTCPAddr(s.IPVersion, fmt.Sprintf("%s:%d", s.IP, s.Port))

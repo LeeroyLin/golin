@@ -7,13 +7,15 @@ import (
 )
 
 type GlobalConf struct {
-	Name      string
-	Host      string
-	TcpPort   int
-	MaxConn   int
-	MaxMsgLen uint32
-	IsEncrypt bool
-	RC4Key    string
+	Name             string
+	Host             string
+	TcpPort          int
+	MaxConn          int
+	MaxMsgLen        uint32
+	IsEncrypt        bool
+	RC4Key           string
+	WorkerPoolSize   uint32
+	MaxWorkerTaskLen uint32
 }
 
 var GlobalConfig *GlobalConf
@@ -36,13 +38,15 @@ func (g GlobalConf) LoadFromConf() {
 
 func init() {
 	GlobalConfig = &GlobalConf{
-		Name:      "GoLinServer",
-		TcpPort:   2333,
-		Host:      "0.0.0.0",
-		MaxConn:   1000,
-		MaxMsgLen: 4096,
-		IsEncrypt: false,
-		RC4Key:    "LeeroyLin",
+		Name:             "GoLinServer",
+		TcpPort:          2333,
+		Host:             "0.0.0.0",
+		MaxConn:          1000,
+		MaxMsgLen:        4096,
+		IsEncrypt:        false,
+		RC4Key:           "LeeroyLin",
+		WorkerPoolSize:   5,
+		MaxWorkerTaskLen: 1024,
 	}
 
 	GlobalConfig.LoadFromConf()

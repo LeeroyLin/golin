@@ -5,5 +5,7 @@
   "MaxConn": 1000,
   "MaxMsgLen": 4096,
   "IsEncrypt": false,
-  "RC4Key": "Mz,*'cP,.:'|z2"
+  "RC4Key": "Mz,*'cP,.:'|z2",
+  "WorkerPoolSize": 5,
+  "MaxWorkerTaskLen": 1024
 }
