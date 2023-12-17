@@ -15,6 +15,8 @@ type Server struct {
 	Port           int
 	MessageHandler iface.IMessageHandler
 	ConnManager    iface.IConnManager
+	OnConnStart    func(conn iface.IConnection)
+	OnConnStop     func(conn iface.IConnection)
 }
 
 func (s *Server) AddRouter(protoId uint16, router iface.IRouter, reqData proto.Message) {
@@ -94,6 +96,26 @@ func (s *Server) Serve() {
 
 func (s *Server) GetConnMgr() iface.IConnManager {
 	return s.ConnManager
+}
+
+func (s *Server) SetOnConnStart(handler func(conn iface.IConnection)) {
+	s.OnConnStart = handler
+}
+
+func (s *Server) CallOnConnStart(conn iface.IConnection) {
+	if s.OnConnStart != nil {
+		s.OnConnStart(conn)
+	}
+}
+
+func (s *Server) SetOnConnStop(handler func(conn iface.IConnection)) {
+	s.OnConnStop = handler
+}
+
+func (s *Server) CallOnConnStop(conn iface.IConnection) {
+	if s.OnConnStart != nil {
+		s.OnConnStop(conn)
+	}
 }
 
 func NewServer() iface.IServer {

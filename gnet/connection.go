@@ -91,6 +91,9 @@ func (c *Connection) Start() {
 	c.Logln("【Start】 connection")
 
 	go c.StartReader()
+	go c.StartWriter()
+
+	c.Server.CallOnConnStart(c)
 }
 
 func (c *Connection) Stop() {
@@ -101,6 +104,8 @@ func (c *Connection) Stop() {
 	}
 
 	c.isClosed = true
+
+	c.Server.CallOnConnStop(c)
 
 	err := c.Conn.Close()
 	if err != nil {
