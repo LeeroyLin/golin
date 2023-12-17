@@ -14,6 +14,7 @@ type Server struct {
 	IP             string
 	Port           int
 	MessageHandler iface.IMessageHandler
+	ConnManager    iface.IConnManager
 }
 
 func (s *Server) AddRouter(protoId uint16, router iface.IRouter, reqData proto.Message) {
@@ -61,7 +62,13 @@ func (s *Server) Start() {
 				continue
 			}
 
-			dealConn := NewConnection(conn, cid, s.MessageHandler)
+			if s.ConnManager.Len() >= utils.GlobalConfig.MaxConn {
+				conn.Close()
+				fmt.Println("【ERROR】 Add conn failed. Over max conn size.")
+				continue
+			}
+
+			dealConn := NewConnection(s, conn, cid, s.MessageHandler)
 
 			if cid == ^uint32(0) {
 				cid = 0
@@ -75,12 +82,18 @@ func (s *Server) Start() {
 }
 
 func (s *Server) Stop() {
+	fmt.Println("[Stop] Server stopped.")
+	s.ConnManager.ClearConn()
 }
 
 func (s *Server) Serve() {
 	s.Start()
 
 	select {}
+}
+
+func (s *Server) GetConnMgr() iface.IConnManager {
+	return s.ConnManager
 }
 
 func NewServer() iface.IServer {
@@ -90,6 +103,7 @@ func NewServer() iface.IServer {
 		IP:             utils.GlobalConfig.Host,
 		Port:           utils.GlobalConfig.TcpPort,
 		MessageHandler: NewMessageHandler(),
+		ConnManager:    NewConnManager(),
 	}
 
 	return s

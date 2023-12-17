@@ -11,6 +11,7 @@ import (
 )
 
 type Connection struct {
+	Server         iface.IServer
 	Conn           *net.TCPConn
 	ConnId         uint32
 	isClosed       bool
@@ -109,6 +110,8 @@ func (c *Connection) Stop() {
 
 	close(c.exitChan)
 	close(c.msgChan)
+
+	c.Server.GetConnMgr().Remove(c)
 }
 
 func (c *Connection) GetTCPConnection() *net.TCPConn {
@@ -192,8 +195,9 @@ func (c *Connection) SendPBNotify(resData proto.Message, errorCode int32) error 
 	return c.Send(0, pbResponse)
 }
 
-func NewConnection(conn *net.TCPConn, connId uint32, MessageHandler iface.IMessageHandler) *Connection {
+func NewConnection(server iface.IServer, conn *net.TCPConn, connId uint32, MessageHandler iface.IMessageHandler) *Connection {
 	c := &Connection{
+		Server:         server,
 		Conn:           conn,
 		ConnId:         connId,
 		MessageHandler: MessageHandler,
@@ -201,6 +205,8 @@ func NewConnection(conn *net.TCPConn, connId uint32, MessageHandler iface.IMessa
 		exitChan:       make(chan bool, 1),
 		msgChan:        make(chan []byte),
 	}
+
+	server.GetConnMgr().Add(c)
 
 	return c
 }

@@ -7,4 +7,5 @@ type IServer interface {
 	Stop()
 	Serve()
 	AddRouter(protoId uint16, router IRouter, reqData proto.Message)
+	GetConnMgr() IConnManager
 }
